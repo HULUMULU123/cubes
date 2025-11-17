@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import styled, { createGlobalStyle, keyframes } from 'styled-components';
-import { DiceBox } from '@3d-dice/dice-box';
+import { useEffect, useRef, useState } from "react";
+import styled, { createGlobalStyle, keyframes } from "styled-components";
+import DiceBox from "@3d-dice/dice-box";
 
 interface DicePreset {
   label: string;
@@ -16,13 +16,15 @@ interface RollRecord {
 }
 
 const dicePresets: DicePreset[] = [
-  { label: 'd4', type: 'd4', sides: 4 },
-  { label: 'd6', type: 'd6', sides: 6 },
-  { label: 'd8', type: 'd8', sides: 8 },
-  { label: 'd10', type: 'd10', sides: 10 },
-  { label: 'd12', type: 'd12', sides: 12 },
-  { label: 'd20', type: 'd20', sides: 20 },
+  { label: "d4", type: "d4", sides: 4 },
+  { label: "d6", type: "d6", sides: 6 },
+  { label: "d8", type: "d8", sides: 8 },
+  { label: "d10", type: "d10", sides: 10 },
+  { label: "d12", type: "d12", sides: 12 },
+  { label: "d20", type: "d20", sides: 20 },
 ];
+
+const DICE_CONTAINER_ID = "dice-box-container";
 
 const GlobalStyle = createGlobalStyle`
   :root {
@@ -183,13 +185,18 @@ const Table = styled.div`
   overflow: hidden;
   background: ${woodTexture};
   min-height: 520px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25), 0 25px 50px rgba(0, 0, 0, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25),
+    0 25px 50px rgba(0, 0, 0, 0.65);
 `;
 
 const TableOverlay = styled.div`
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 20%, rgba(0, 0, 0, 0.3), transparent 45%),
+  background: radial-gradient(
+      circle at 50% 20%,
+      rgba(0, 0, 0, 0.3),
+      transparent 45%
+    ),
     radial-gradient(circle at 70% 60%, rgba(0, 0, 0, 0.18), transparent 48%);
   pointer-events: none;
 `;
@@ -251,7 +258,7 @@ const LiveBadge = styled.div`
   gap: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
   &::before {
-    content: '';
+    content: "";
     width: 10px;
     height: 10px;
     background: #fdf2d0;
@@ -269,7 +276,7 @@ const MobileDiagonal = styled.div`
   @media (max-width: 720px) {
     display: block;
     &::after {
-      content: 'мобильная диагональ';
+      content: "мобильная диагональ";
       position: absolute;
       top: -80px;
       right: -140px;
@@ -277,7 +284,11 @@ const MobileDiagonal = styled.div`
       width: 360px;
       padding: 14px 0;
       text-align: center;
-      background: linear-gradient(135deg, rgba(243, 152, 63, 0.95), rgba(196, 91, 28, 0.92));
+      background: linear-gradient(
+        135deg,
+        rgba(243, 152, 63, 0.95),
+        rgba(196, 91, 28, 0.92)
+      );
       color: #1a0e08;
       font-weight: 800;
       letter-spacing: 0.08em;
@@ -309,53 +320,58 @@ const ColorSwatch = styled.span<{ color: string }>`
   display: inline-block;
 `;
 
+const ErrorToast = styled.div`
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(196, 91, 28, 0.92);
+  color: #1a0e08;
+  font-weight: 700;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+`;
+
 function App() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const diceBoxRef = useRef<DiceBox | null>(null);
+  const diceBoxRef = useRef<any | null>(null);
   const [selectedDice, setSelectedDice] = useState<DicePreset>(dicePresets[1]);
   const [quantity, setQuantity] = useState(3);
-  const [size, setSize] = useState(1.1);
-  const [color, setColor] = useState('#f3983f');
+  const [size, setSize] = useState(10000000);
+  const [color, setColor] = useState("#f3983f");
   const [history, setHistory] = useState<RollRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
-
-  const currentTheme = useMemo(
-    () => ({
-      material: 'plastic',
-      background: '#1a0e08',
-      edges: '#1a0e08',
-      labels: '#fdf2d0',
-      color,
-      size,
-    }),
-    [color, size],
-  );
 
   useEffect(() => {
     let cancelled = false;
 
     const initDice = async () => {
-      if (!containerRef.current) return;
       try {
-        const box = new DiceBox(containerRef.current, {
-          assetPath: 'https://cdn.jsdelivr.net/npm/@3d-dice/dice-box@1.0.10/dist/assets/',
+        console.log("[Dice] init start");
+
+        const box = new DiceBox({
+          assetPath: "/assets/dice-box/", // локальный путь (ammo + themes/default)
+          container: `#${DICE_CONTAINER_ID}`,
           scale: 6,
           shadowQuality: 0.8,
           light: { intensity: 1.08, x: 0, y: 5, z: 2 },
-          origin: { x: 0, y: -1.6 },
-          theme: currentTheme,
+          theme: "default", // используем стандартную тему
         });
 
         await box.init();
+        console.log("[Dice] init done");
+
         if (!cancelled) {
           diceBoxRef.current = box;
           setLoading(false);
         }
       } catch (error) {
-        console.error('Dice box failed to initialize', error);
+        console.error("[Dice] init error", error);
         if (!cancelled) {
-          setInitError('Не удалось загрузить кубики. Попробуйте обновить страницу.');
+          setInitError(
+            "Не удалось загрузить кубики. Проверьте ассеты в /public/assets/dice-box."
+          );
           setLoading(false);
         }
       }
@@ -368,14 +384,16 @@ function App() {
       diceBoxRef.current?.clear();
       diceBoxRef.current = null;
     };
-  }, [currentTheme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rollDice = async () => {
     if (!diceBoxRef.current) return;
     const notation = `${quantity}${selectedDice.type}`;
 
-    const syntheticResult = Array.from({ length: quantity }, () =>
-      Math.floor(Math.random() * selectedDice.sides) + 1,
+    const syntheticResult = Array.from(
+      { length: quantity },
+      () => Math.floor(Math.random() * selectedDice.sides) + 1
     );
 
     setHistory((prev) => [
@@ -389,10 +407,10 @@ function App() {
     ]);
 
     try {
-      await diceBoxRef.current.roll(notation, { theme: currentTheme });
+      await diceBoxRef.current.roll(notation);
     } catch (error) {
-      console.error('Roll failed', error);
-      setInitError('Анимация броска недоступна, но результаты сохранены.');
+      console.error("Roll failed", error);
+      setInitError("Анимация броска недоступна, но результаты сохранены.");
     }
   };
 
@@ -405,8 +423,9 @@ function App() {
         <Panel>
           <Title>Живой стол кубиков</Title>
           <Subtitle>
-            Выбирайте типы, цвета и размер кубиков. Бросайте их на тёплый деревянный стол с
-            объёмной анимацией — всё готово к быстрым партийным решениям.
+            Выбирайте типы, цвета и размер кубиков. Бросайте их на тёплый
+            деревянный стол с объёмной анимацией — всё готово к быстрым
+            партийным решениям.
           </Subtitle>
 
           <ControlGroup>
@@ -416,7 +435,9 @@ function App() {
                 value={selectedDice.type}
                 onChange={(event) =>
                   setSelectedDice(
-                    dicePresets.find((preset) => preset.type === event.target.value) || dicePresets[0],
+                    dicePresets.find(
+                      (preset) => preset.type === event.target.value
+                    ) || dicePresets[0]
                   )
                 }
               >
@@ -435,13 +456,21 @@ function App() {
                 min={1}
                 max={10}
                 value={quantity}
-                onChange={(event) => setQuantity(Math.min(10, Math.max(1, Number(event.target.value))))}
+                onChange={(event) =>
+                  setQuantity(
+                    Math.min(10, Math.max(1, Number(event.target.value)))
+                  )
+                }
               />
             </Label>
 
             <Label>
               Цвет акцента
-              <ColorInput type="color" value={color} onChange={(event) => setColor(event.target.value)} />
+              <ColorInput
+                type="color"
+                value={color}
+                onChange={(event) => setColor(event.target.value)}
+              />
             </Label>
 
             <Label>
@@ -449,7 +478,7 @@ function App() {
               <Slider
                 type="range"
                 min={0.8}
-                max={1.5}
+                max={10000000000}
                 step={0.05}
                 value={size}
                 onChange={(event) => setSize(Number(event.target.value))}
@@ -459,7 +488,9 @@ function App() {
 
           <ButtonRow>
             <Button onClick={rollDice} disabled={loading}>
-              {loading ? 'Загрузка стола...' : `Бросить ${quantity}${selectedDice.type}`}
+              {loading
+                ? "Загрузка стола..."
+                : `Бросить ${quantity}${selectedDice.type}`}
             </Button>
             <ClearButton onClick={clearHistory}>Очистить историю</ClearButton>
           </ButtonRow>
@@ -467,8 +498,9 @@ function App() {
           <Hint>
             <ColorSwatch color={color} />
             <span>
-              Настройте оттенок, чтобы различать броски: яркий цвет подчеркнёт траекторию на столе,
-              а размер поможет адаптировать мобильную диагональ.
+              Настройте оттенок, чтобы различать броски: яркий цвет подчеркнёт
+              траекторию на столе, а размер поможет адаптировать мобильную
+              диагональ.
             </span>
           </Hint>
 
@@ -489,7 +521,7 @@ function App() {
         <Table>
           <LiveBadge>Live Roll</LiveBadge>
           <MobileDiagonal />
-          <DiceCanvas ref={containerRef} />
+          <DiceCanvas id={DICE_CONTAINER_ID} />
           <TableOverlay />
         </Table>
       </Layout>
@@ -497,18 +529,5 @@ function App() {
     </>
   );
 }
-
-const ErrorToast = styled.div`
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 14px 18px;
-  border-radius: 12px;
-  background: rgba(196, 91, 28, 0.92);
-  color: #1a0e08;
-  font-weight: 700;
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-`;
 
 export default App;
